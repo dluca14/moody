@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 def get_mood(picture):
-    test_image_one = plt.imread("image.jpg")
+    test_image_one = plt.imread("photos/image.jpg")
     emo_detector = FER(mtcnn=True)
     # Capture all the emotions on the image
     captured_emotions = emo_detector.detect_emotions(test_image_one)
@@ -36,6 +36,26 @@ class MoodsViewSet(viewsets.ModelViewSet):
 
     serializer_class = MoodsSerializer
     queryset = Moods.objects.all()
+
+    def upload_capture(self):
+        pass
+        '''
+        - save photo in /photos for now
+        - apply fer to it to find mood type
+        - save mood in db
+        '''
+
+    def mood_frequency(self):
+        pass
+        '''
+        return mood distribution for a user
+        '''
+
+    def proximity_to_location(self):
+        pass
+        '''
+        query all moods (point) that are within or close to user address (polygon) 
+        '''
 
 
 class UsersViewSet(viewsets.ModelViewSet):
