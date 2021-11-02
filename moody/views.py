@@ -1,14 +1,15 @@
 from rest_framework import viewsets, status
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.generics import get_object_or_404
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import GEOSGeometry, Point
 from rest_framework.decorators import action
 from django_filters import rest_framework as filters
 from .filters import MoodProximityFilter
-from .models import Users, Moods
-from .serializers import UsersSerializer, MoodsSerializer
+from .models import Users, Locations, Moods
+from .serializers import UsersSerializer, LocationsSerializer, MoodsSerializer
 
 from fer import FER
 import matplotlib.pyplot as plt
@@ -28,6 +29,55 @@ def get_mood(picture):
     print(dominant_emotion, emotion_score)
 
     return dominant_emotion
+
+
+class UsersViewSet(viewsets.ModelViewSet):
+    # authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [AllowAny]
+
+    serializer_class = UsersSerializer
+    queryset = Users.objects.all()
+
+    # add custom endpoint
+    @action(detail=False, methods=["get"])
+    def featured(self, request):
+        users = self.get_queryset().filter(name='david')
+        serializer = self.get_serializer(users, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"])
+    def create_if(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if serializer.validated_data['name'] == 'Alesul':
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            response = Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        else:
+            response = Response('not created', status=status.HTTP_400_BAD_REQUEST)
+
+        return response
+
+
+class LocationsViewSet(viewsets.ModelViewSet):
+    # authentication_classes = [SessionAuthentication, BasicAuthentication]
+    permission_classes = [AllowAny]
+
+    serializer_class = LocationsSerializer
+    queryset = Locations.objects.all()
+
+    @action(detail=False, methods=["get"])
+    def happy(self, request):
+        id = request.data['user_id']
+
+        user = Users.objects.get(id=id)
+        happy_locations = []
+        for user_location in user.locations.all():
+            for user_mood in user.moods.all():
+                if user_mood.type == 'happy' and user_mood.location == user_location:
+                    happy_locations.append(user_location.name)
+
+        return Response(data=happy_locations, status=200)
 
 
 class MoodsViewSet(viewsets.ModelViewSet):
@@ -56,27 +106,3 @@ class MoodsViewSet(viewsets.ModelViewSet):
         '''
         query all moods (point) that are within or close to user address (polygon) 
         '''
-
-
-class UsersViewSet(viewsets.ModelViewSet):
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
-
-    serializer_class = UsersSerializer
-    queryset = Users.objects.all()
-    filterset_class = MoodProximityFilter
-    filter_backends = [filters.DjangoFilterBackend]
-
-    @action(detail=False, methods=['get'])
-    def get_nearest_moods(self, request):
-        x_coords = request.GET.get('x', None)
-        y_coords = request.GET.get('y', None)
-        if x_coords and y_coords:
-            user_location = Point(float(x_coords), float(y_coords), srid=4326)
-            # mood_location = Moods.location
-            nearest_moods = Users.objects.annotate(
-                distance=Distance('geom', user_location)).order_by('distance')[:5]
-            serializer = self.get_serializer_class()
-            serialized = serializer(nearest_moods, many=True)
-            return Response(serialized.data, status=status.HTTP_200_OK)
-        return Response(status=status.HTTP_400_BAD_REQUEST)
