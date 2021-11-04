@@ -1,3 +1,5 @@
+import json
+
 from rest_framework import viewsets, status
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.generics import get_object_or_404
@@ -7,6 +9,7 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import GEOSGeometry, Point
 from rest_framework.decorators import action
 from django_filters import rest_framework as filters
+
 from .filters import MoodProximityFilter
 from .models import Users, Locations, Moods
 from .serializers import UsersSerializer, LocationsSerializer, MoodsSerializer
@@ -68,16 +71,18 @@ class LocationsViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"])
     def happy(self, request):
-        id = request.data['user_id']
-
+        id = int(request.data['user_id'])
         user = Users.objects.get(id=id)
-        happy_locations = []
-        for user_location in user.locations.all():
-            for user_mood in user.moods.all():
-                if user_mood.type == 'happy' and user_mood.location == user_location:
-                    happy_locations.append(user_location.name)
 
-        return Response(data=happy_locations, status=200)
+        happy_moods = {}
+        for user_mood in user.moods.all():
+            if user_mood.type == 'happy':
+                proximity_to_locations = {}
+                for user_location in user.locations.all():
+                    proximity_to_locations[user_location.name] = user_location.poly.distance(user_mood.mood_addr)
+                happy_moods[user_mood.picture_name] = proximity_to_locations
+
+        return Response(data=json.dumps(happy_moods, indent=4), status=200)
 
 
 class MoodsViewSet(viewsets.ModelViewSet):
