@@ -69,25 +69,11 @@ class LocationsViewSet(viewsets.ModelViewSet):
     serializer_class = LocationsSerializer
     queryset = Locations.objects.all()
 
-    @action(detail=False, methods=["get"])
-    def happy(self, request):
-        id = int(request.data['user_id'])
-        user = Users.objects.get(id=id)
-
-        happy_moods = {}
-        for user_mood in user.moods.all():
-            if user_mood.type == 'happy':
-                proximity_to_locations = {}
-                for user_location in user.locations.all():
-                    proximity_to_locations[user_location.name] = user_location.poly.distance(user_mood.mood_addr)
-                happy_moods[user_mood.picture_name] = proximity_to_locations
-
-        return Response(data=json.dumps(happy_moods, indent=4), status=200)
-
 
 class MoodsViewSet(viewsets.ModelViewSet):
-    authentication_classes = [SessionAuthentication, BasicAuthentication]
-    permission_classes = [IsAuthenticated]
+    # authentication_classes = [SessionAuthentication, BasicAuthentication]
+    # permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     serializer_class = MoodsSerializer
     queryset = Moods.objects.all()
@@ -100,14 +86,41 @@ class MoodsViewSet(viewsets.ModelViewSet):
         - save mood in db
         '''
 
-    def mood_frequency(self):
-        pass
-        '''
-        return mood distribution for a user
-        '''
+    @action(detail=False, methods=["get"])
+    def mood_frequency_distribution(self, request):
+        id = int(request.data['user_id'])
+        user = Users.objects.get(id=id)
 
-    def proximity_to_location(self):
-        pass
-        '''
-        query all moods (point) that are within or close to user address (polygon) 
-        '''
+        # moods_distribution = {
+        #     'happy': [],
+        #     'sad': []
+        # }
+        # for mood in user.moods.all():
+        #     moods_distribution[mood.type].append({'pic_name': mood.picture_name, 'location': mood.location})
+
+        mood_distr_per_locations = []
+        for user_location in user.locations.all():
+            mood_distr = {
+                'happy': 0,
+                'sad': 0
+            }
+            for loc_mood in user_location.moods.all():
+                mood_distr[loc_mood.type] += mood_distr.get(loc_mood.type, 0)
+            mood_distr_per_locations.append(mood_distr)
+
+        return Response(mood_distr_per_locations)
+
+    @action(detail=False, methods=["get"])
+    def proximity_to_happy_locations(self, request):
+        id = int(request.data['user_id'])
+        user = Users.objects.get(id=id)
+
+        happy_moods = {}
+        for user_mood in user.moods.all():
+            if user_mood.type == 'happy':
+                proximity_to_locations = {}
+                for user_location in user.locations.all():
+                    proximity_to_locations[user_location.name] = user_location.poly.distance(user_mood.mood_addr)
+                happy_moods[user_mood.picture_name] = proximity_to_locations
+
+        return Response(data=json.dumps(happy_moods, indent=4), status=200)
