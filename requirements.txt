@@ -28,3 +28,6 @@ six==1.16.0
 sqlparse==0.4.2
 tqdm==4.62.3
 urllib3==1.26.7
+
+setuptools~=58.3.0
+diagrams~=0.20.0
