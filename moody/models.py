@@ -1,6 +1,10 @@
 from django.contrib.gis.db import models
 
 
+class Image(models.Model):
+    image_url = models.ImageField(upload_to='static/bills', blank=True)
+
+
 class Users(models.Model):
     name = models.CharField(max_length=255, blank=True, null=True)
 

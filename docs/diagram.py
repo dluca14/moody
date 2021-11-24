@@ -17,4 +17,4 @@ with Diagram("Simple Website Diagram", direction='LR') as diag: # It's LR by def
     dns >> load_balancer >> svc_group
     svc_group >> cache
     svc_group >> database
-diag # This will illustrate the diagram if you are using a Google Colab or Jypiter notebook.
+diag  # This will illustrate the diagram if you are using a Google Colab or Jypiter notebook.

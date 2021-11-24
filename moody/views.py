@@ -1,4 +1,5 @@
 import json
+from io import StringIO
 
 from rest_framework import viewsets, status
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
@@ -16,22 +17,6 @@ from .serializers import UsersSerializer, LocationsSerializer, MoodsSerializer
 
 from fer import FER
 import matplotlib.pyplot as plt
-
-
-def get_mood(picture):
-    test_image_one = plt.imread("photos/image.jpg")
-    emo_detector = FER(mtcnn=True)
-    # Capture all the emotions on the image
-    captured_emotions = emo_detector.detect_emotions(test_image_one)
-    # Print all captured emotions with the image
-    print(captured_emotions)
-    plt.imshow(test_image_one)
-
-    # Use the top Emotion() function to call for the dominant emotion in the image
-    dominant_emotion, emotion_score = emo_detector.top_emotion(test_image_one)
-    print(dominant_emotion, emotion_score)
-
-    return dominant_emotion
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -70,6 +55,23 @@ class LocationsViewSet(viewsets.ModelViewSet):
     queryset = Locations.objects.all()
 
 
+def get_mood(picture):
+    # test_image_one = plt.imread("photos/selfie.jpg")
+    test_image_one = plt.imread(picture)
+    emo_detector = FER(mtcnn=True)
+    # Capture all the emotions on the image
+    captured_emotions = emo_detector.detect_emotions(test_image_one)
+    # Print all captured emotions with the image
+    print(captured_emotions)
+    plt.imshow(test_image_one)
+
+    # Use the top Emotion() function to call for the dominant emotion in the image
+    dominant_emotion, emotion_score = emo_detector.top_emotion(test_image_one)
+    print(dominant_emotion, emotion_score)
+
+    return dominant_emotion
+
+
 class MoodsViewSet(viewsets.ModelViewSet):
     # authentication_classes = [SessionAuthentication, BasicAuthentication]
     # permission_classes = [IsAuthenticated]
@@ -78,13 +80,22 @@ class MoodsViewSet(viewsets.ModelViewSet):
     serializer_class = MoodsSerializer
     queryset = Moods.objects.all()
 
-    def upload_capture(self):
-        pass
+    @action(detail=False, methods=["post"])
+    def upload_capture(self, request):
+        picture = request.FILES.getlist('file_image')[0]
+        # from .models import Image
+        # a = Image()
+        # a.image_url = request.data.get('file_image')
+
+        mood = get_mood(picture)
+
         '''
         - save photo in /photos for now
         - apply fer to it to find mood type
         - save mood in db
         '''
+        return
+
 
     @action(detail=False, methods=["get"])
     def mood_frequency_distribution(self, request):
