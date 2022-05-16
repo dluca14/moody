@@ -1,4 +1,4 @@
-# Stem - moody
+# Moody
 
 ## Tools
 - Python
